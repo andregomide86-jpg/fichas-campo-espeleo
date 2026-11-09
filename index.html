@@ -668,14 +668,11 @@ function abrirCamera() {
 
 function linhasTarja(coords, quando) {
     var L = [];
-    L.push(trim(val('cavidade_nome')) + ' | Projeto ' + trim(val('projeto')));
-    if (equipeStr()) L.push('Equipe: ' + equipeStr());
     L.push(pad2(quando.getDate()) + '/' + pad2(quando.getMonth() + 1) + '/' + quando.getFullYear() + ' ' +
         pad2(quando.getHours()) + ':' + pad2(quando.getMinutes()) + ':' + pad2(quando.getSeconds()));
     if (coords) {
         var u = latLonToUTM(coords.latitude, coords.longitude);
-        var alt = (coords.altitude !== null && coords.altitude !== undefined && !isNaN(coords.altitude)) ? ' Alt. ' + Math.round(coords.altitude) + ' m' : '';
-        L.push('UTM E ' + u.e + ' N ' + u.n + alt + ' (WGS 84)');
+        L.push('E ' + u.e + '  N ' + u.n);
     }
     return L;
 }
@@ -690,24 +687,21 @@ function gerarFotoComTarja(img, coords, quando) {
     var ctx = cv.getContext('2d');
     ctx.drawImage(img, 0, 0, w, h);
 
+    // Texto pequeno no canto inferior esquerdo, sem fundo (contorno escuro para leitura)
     var linhas = linhasTarja(coords, quando);
-    var fs = Math.max(14, Math.round(Math.min(w, h) / 32));
-    var pad, maxW;
-    while (true) {
-        ctx.font = 'bold ' + fs + 'px Arial, sans-serif';
-        pad = Math.round(fs * 0.6);
-        maxW = 0;
-        each(linhas, function (l) { var m = ctx.measureText(l).width; if (m > maxW) maxW = m; });
-        if (maxW <= w - 2 * pad || fs <= 10) break;
-        fs--;
-    }
-    var lh = Math.round(fs * 1.3);
-    var boxH = linhas.length * lh + pad * 2;
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(0, h - boxH, w, boxH);
-    ctx.fillStyle = '#ffffff';
+    var fs = Math.max(12, Math.round(Math.min(w, h) / 45));
+    var pad = Math.round(fs * 0.8), lh = Math.round(fs * 1.25);
+    ctx.font = 'bold ' + fs + 'px Arial, sans-serif';
     ctx.textBaseline = 'top';
-    each(linhas, function (l, i) { ctx.fillText(l, pad, h - boxH + pad + i * lh); });
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(2, Math.round(fs / 6));
+    ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+    ctx.fillStyle = '#ffffff';
+    var y0 = h - pad - linhas.length * lh;
+    each(linhas, function (l, i) {
+        ctx.strokeText(l, pad, y0 + i * lh);
+        ctx.fillText(l, pad, y0 + i * lh);
+    });
 
     var nome = baseNome(quando) + '_foto' + pad2(lista('fotos_lista').length + 1) + '_' + hms(quando) + '.jpg';
     function finalizar(blob) {
