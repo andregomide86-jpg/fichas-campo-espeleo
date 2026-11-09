@@ -66,13 +66,13 @@
 
 <nav id="sidebar">
     <button type="button" onclick="showTab(1)" class="tab-btn active">1 GERAL</button>
-    <button type="button" onclick="showTab(2)" class="tab-btn">2 EXT</button>
-    <button type="button" onclick="showTab(3)" class="tab-btn">3 MACIÇO</button>
-    <button type="button" onclick="showTab(4)" class="tab-btn">4 DOLINA</button>
-    <button type="button" onclick="showTab(5)" class="tab-btn">5 LITOL</button>
-    <button type="button" onclick="showTab(6)" class="tab-btn">6 VEGET</button>
-    <button type="button" onclick="showTab(7)" class="tab-btn">7 PISO</button>
-    <button type="button" onclick="showTab(8)" class="tab-btn">8 HIDRO</button>
+    <button type="button" onclick="showTab(2)" class="tab-btn">2 GEOMORF</button>
+    <button type="button" onclick="showTab(3)" class="tab-btn">3 PISO</button>
+    <button type="button" onclick="showTab(4)" class="tab-btn">4 VEGET</button>
+    <button type="button" onclick="showTab(5)" class="tab-btn">5 HIDRO</button>
+    <button type="button" onclick="showTab(6)" class="tab-btn">6 LITOL</button>
+    <button type="button" onclick="showTab(7)" class="tab-btn">7 MACIÇO</button>
+    <button type="button" onclick="showTab(8)" class="tab-btn">8 DOLINA</button>
     <button type="button" onclick="showTab(9)" class="tab-btn">9 POTENC</button>
     <button type="button" onclick="showTab(10)" class="tab-btn">10 OBS</button>
 </nav>
@@ -116,41 +116,49 @@
     </div>
 
     <!-- ABA 2 -->
-    <div id="tab2" class="tab-content" data-title="Características externas">
-        <h2>Características Externas</h2>
+    <div id="tab2" class="tab-content" data-title="Geomorfologia">
+        <h2>Geomorfologia</h2>
         <div class="form-group"><label>1. Posição na vertente</label><div class="section-box" id="checks_vertente"></div></div>
         <div class="form-group"><label>2. Declividade do terreno <span class="hint">(até 2 classes vizinhas)</span></label><div class="section-box" id="checks_decliv"></div></div>
     </div>
 
     <!-- ABA 3 -->
-    <div id="tab3" class="tab-content" data-title="Maciço / Exocarste">
-        <h2>Maciço / Exocarste</h2>
-        <div class="form-group"><label>3. Maciço / Exocarste</label><div class="section-box" id="checks_macico_container"></div></div>
-        <div class="form-group"><label>4. Litologia</label><div class="section-box" id="checks_litologia"></div></div>
-        <div class="form-group"><label>5. Dimensões do afloramento <span class="hint">(opcional)</span></label><input type="text" class="dict" id="aflor_dim" placeholder="Altura, extensão lateral..."></div>
-        <div class="form-group"><label>6. Área de ocupação</label><div class="section-box" id="checks_ocupacao"></div></div>
+    <div id="tab3" class="tab-content" data-title="Piso">
+        <h2>Piso</h2>
+        <div class="form-group"><label>3. Constituição do piso</label><div class="section-box" id="checks_piso"></div></div>
     </div>
 
     <!-- ABA 4 -->
-    <div id="tab4" class="tab-content" data-title="Dolina">
-        <h2>Dolina</h2>
-        <div class="form-group"><label>7. Dolina – Localização</label><div class="section-box" id="checks_dolina_loc"></div></div>
-        <div class="form-group"><label>8. Dolina – Dimensão / Forma</label><div class="section-box" id="checks_dolina_dim"></div></div>
-        <div class="form-group"><label>9. Dimensões da dolina <span class="hint">(opcional)</span></label><input type="text" class="dict" id="dolina_medidas" placeholder="Eixo maior, eixo menor, profundidade..."></div>
+    <div id="tab4" class="tab-content" data-title="Vegetação">
+        <h2>Vegetação</h2>
+        <div class="form-group"><label>4. Porte</label><div class="section-box" id="checks_veg_porte"></div></div>
+        <div class="form-group"><label>5. Tipo de mata</label><div class="section-box" id="checks_veg_tipo"></div></div>
     </div>
 
     <!-- ABA 5 -->
-    <div id="tab5" class="tab-content" data-title="Litoestratigrafia e estruturas">
+    <div id="tab5" class="tab-content" data-title="Hidrografia">
+        <h2>Hidrografia</h2>
+        <div class="form-group"><label>6. Corpo d'água</label><div class="section-box" id="checks_corpo_agua"></div></div>
+        <div class="form-group"><label>7. Regime</label><div class="section-box" id="checks_regime"></div></div>
+        <div class="grid-2">
+            <div class="form-group"><label>Largura <span class="hint">(opcional)</span></label><input type="text" id="hidro_largura" placeholder="m"></div>
+            <div class="form-group"><label>Direção do fluxo <span class="hint">(opcional)</span></label><input type="text" id="hidro_direcao" placeholder="Azimute / sentido"></div>
+        </div>
+        <div class="form-group"><label>Descrição <span class="hint">(opcional)</span></label><textarea id="hidro_desc" rows="2" placeholder="Outras informações sobre o corpo d'água..."></textarea></div>
+    </div>
+
+    <!-- ABA 6 -->
+    <div id="tab6" class="tab-content" data-title="Litoestratigrafia e estruturas">
         <h2>Litoestratigrafia e Estruturas</h2>
         <div class="form-group">
-            <label>10. Litoestratigrafia</label>
+            <label>8. Litoestratigrafia</label>
             <div class="section-box" id="box_lito">
                 <div class="na-row" id="na_lito"></div>
                 <textarea id="litoestratigrafia" rows="3" placeholder="Descreva a litoestratigrafia observada..."></textarea>
             </div>
         </div>
         <div class="form-group">
-            <label>11. Estruturas geológicas</label>
+            <label>9. Estruturas geológicas</label>
             <div class="section-box" id="box_estrut">
                 <div class="na-row" id="na_estrut"></div>
                 <textarea id="estruturas_geo" rows="3" placeholder="Fraturas, falhas, foliação, acamamento, diáclases, orientações..."></textarea>
@@ -158,29 +166,21 @@
         </div>
     </div>
 
-    <!-- ABA 6 -->
-    <div id="tab6" class="tab-content" data-title="Vegetação">
-        <h2>Vegetação</h2>
-        <div class="form-group"><label>12. Porte</label><div class="section-box" id="checks_veg_porte"></div></div>
-        <div class="form-group"><label>13. Tipo de mata</label><div class="section-box" id="checks_veg_tipo"></div></div>
-    </div>
-
     <!-- ABA 7 -->
-    <div id="tab7" class="tab-content" data-title="Piso">
-        <h2>Piso</h2>
-        <div class="form-group"><label>14. Constituição do piso</label><div class="section-box" id="checks_piso"></div></div>
+    <div id="tab7" class="tab-content" data-title="Maciço / Exocarste">
+        <h2>Maciço / Exocarste</h2>
+        <div class="form-group"><label>10. Maciço / Exocarste</label><div class="section-box" id="checks_macico_container"></div></div>
+        <div class="form-group"><label>11. Litologia</label><div class="section-box" id="checks_litologia"></div></div>
+        <div class="form-group"><label>12. Dimensões do afloramento <span class="hint">(opcional)</span></label><input type="text" class="dict" id="aflor_dim" placeholder="Altura, extensão lateral..."></div>
+        <div class="form-group"><label>13. Área de ocupação</label><div class="section-box" id="checks_ocupacao"></div></div>
     </div>
 
     <!-- ABA 8 -->
-    <div id="tab8" class="tab-content" data-title="Hidrografia">
-        <h2>Hidrografia</h2>
-        <div class="form-group"><label>15. Corpo d'água</label><div class="section-box" id="checks_corpo_agua"></div></div>
-        <div class="form-group"><label>16. Regime</label><div class="section-box" id="checks_regime"></div></div>
-        <div class="grid-2">
-            <div class="form-group"><label>Largura <span class="hint">(opcional)</span></label><input type="text" id="hidro_largura" placeholder="m"></div>
-            <div class="form-group"><label>Direção do fluxo <span class="hint">(opcional)</span></label><input type="text" id="hidro_direcao" placeholder="Azimute / sentido"></div>
-        </div>
-        <div class="form-group"><label>Descrição <span class="hint">(opcional)</span></label><textarea id="hidro_desc" rows="2" placeholder="Outras informações sobre o corpo d'água..."></textarea></div>
+    <div id="tab8" class="tab-content" data-title="Dolina">
+        <h2>Dolina</h2>
+        <div class="form-group"><label>14. Dolina – Localização</label><div class="section-box" id="checks_dolina_loc"></div></div>
+        <div class="form-group"><label>15. Dolina – Dimensão / Forma</label><div class="section-box" id="checks_dolina_dim"></div></div>
+        <div class="form-group"><label>16. Dimensões da dolina <span class="hint">(opcional)</span></label><input type="text" class="dict" id="dolina_medidas" placeholder="Eixo maior, eixo menor, profundidade..."></div>
     </div>
 
     <!-- ABA 9 -->
@@ -242,7 +242,7 @@ function hms(d) { return pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getS
 function slug(s) { return String(s).replace(/[^a-zA-Z0-9]/g, '_').toLowerCase(); }
 function isNA(v) { return v === 'N.O.' || v === 'N.A.'; }
 
-var STORAGE_KEY = 'ficha_prospeccao_espeleo_itambe_v1';
+var STORAGE_KEY = 'ficha_prospeccao_espeleo_itambe_v2';
 function storeGet() { try { return window.localStorage ? window.localStorage.getItem(STORAGE_KEY) : null; } catch (e) { return null; } }
 function storeSet(v) { try { if (window.localStorage) window.localStorage.setItem(STORAGE_KEY, v); } catch (e) {} }
 function storeDel() { try { if (window.localStorage) window.localStorage.removeItem(STORAGE_KEY); } catch (e) {} }
@@ -1010,30 +1010,30 @@ function saveAll() {
         ["Obs. - Dados gerais", obs(1)],
         ["Posição na vertente", groupValue('Vertente')],
         ["Declividade do terreno", groupValue('Declividade').replace('; ', ' a ')],
-        ["Obs. - Características externas", obs(2)],
-        ["Maciço / Exocarste", groupValue('Macico')],
-        ["Litologia", groupValue('Litologia')],
-        ["Dimensões do afloramento", trim(val('aflor_dim'))],
-        ["Área de ocupação", groupValue('Ocupacao')],
-        ["Obs. - Maciço / Exocarste", obs(3)],
-        ["Dolina (Localização)", groupValue('DolinaLoc')],
-        ["Dolina (Dimensão / forma)", groupValue('DolinaDim')],
-        ["Dolina (medidas)", trim(val('dolina_medidas'))],
-        ["Obs. - Dolina", obs(4)],
-        ["Litoestratigrafia", textQValue('litoestratigrafia', 'LitoNA')],
-        ["Estruturas geológicas", textQValue('estruturas_geo', 'EstrutNA')],
-        ["Obs. - Litoestratigrafia e estruturas", obs(5)],
+        ["Obs. - Geomorfologia", obs(2)],
+        ["Piso", groupValue('Piso')],
+        ["Obs. - Piso", obs(3)],
         ["Vegetação - Porte", groupValue('VegPorte')],
         ["Vegetação - Tipo de mata", groupValue('VegTipo')],
-        ["Obs. - Vegetação", obs(6)],
-        ["Piso", groupValue('Piso')],
-        ["Obs. - Piso", obs(7)],
+        ["Obs. - Vegetação", obs(4)],
         ["Hidrografia - Corpo d'água", groupValue('CorpoAgua')],
         ["Hidrografia - Regime", groupValue('Regime')],
         ["Hidrografia - Largura", trim(val('hidro_largura'))],
         ["Hidrografia - Direção do fluxo", trim(val('hidro_direcao'))],
         ["Hidrografia - Descrição", oneLine(trim(val('hidro_desc')))],
-        ["Obs. - Hidrografia", obs(8)],
+        ["Obs. - Hidrografia", obs(5)],
+        ["Litoestratigrafia", textQValue('litoestratigrafia', 'LitoNA')],
+        ["Estruturas geológicas", textQValue('estruturas_geo', 'EstrutNA')],
+        ["Obs. - Litoestratigrafia e estruturas", obs(6)],
+        ["Maciço / Exocarste", groupValue('Macico')],
+        ["Litologia", groupValue('Litologia')],
+        ["Dimensões do afloramento", trim(val('aflor_dim'))],
+        ["Área de ocupação", groupValue('Ocupacao')],
+        ["Obs. - Maciço / Exocarste", obs(7)],
+        ["Dolina (Localização)", groupValue('DolinaLoc')],
+        ["Dolina (Dimensão / forma)", groupValue('DolinaDim')],
+        ["Dolina (medidas)", trim(val('dolina_medidas'))],
+        ["Obs. - Dolina", obs(8)],
         ["Potencial espeleológico", getRadio('Potencial')],
         ["Potencial espeleológico - Descrição", oneLine(trim(val('potencial_desc')))],
         ["Obs. - Potencial espeleológico", obs(9)],
