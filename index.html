@@ -85,6 +85,7 @@
     <!-- ABA 1: DADOS GERAIS -->
     <div id="tab1" class="tab-content active" data-title="Dados gerais">
         <h2>Cadastro Espeleológico</h2>
+        <div class="info-box" id="envio-status" style="display:none;"></div>
         <div class="info-box" id="aviso-content" style="display:none;background:#fdecea;border-color:#e74c3c;color:#922b21;font-size:12px;"></div>
         <div class="form-group"><label>Projeto</label><input type="text" id="projeto" value="Itambé"></div>
 
@@ -792,8 +793,12 @@ var IDB_NOME = STORAGE_KEY + '_arquivos';
 function idbAbrir(cb) {
     try {
         if (!window.indexedDB) { cb(null); return; }
-        var r = indexedDB.open(IDB_NOME, 1);
-        r.onupgradeneeded = function () { r.result.createObjectStore('f', { keyPath: 'nome' }); };
+        var r = indexedDB.open(IDB_NOME, 2);
+        r.onupgradeneeded = function () {
+            var db = r.result;
+            if (!db.objectStoreNames.contains('f')) db.createObjectStore('f', { keyPath: 'nome' });
+            if (!db.objectStoreNames.contains('fila')) db.createObjectStore('fila', { keyPath: 'id', autoIncrement: true });
+        };
         r.onsuccess = function () { cb(r.result); };
         r.onerror = function () { cb(null); };
     } catch (e) { cb(null); }
@@ -871,6 +876,118 @@ function montarZip(itens, cb) {
     }
     prox();
 }
+
+var TIPO_FICHA = 'Cadastro';
+// ── ENVIO AUTOMÁTICO PARA O GOOGLE DRIVE (somente no Wi-Fi) ──────────────
+var ENVIO_URL = '';
+var ENVIO_CHAVE = 'd656269268b7eb7a8d5c14d8';
+var enviando = false;
+
+function filaAdicionar(itens, cb) {
+    idbAbrir(function (db) {
+        if (!db) { cb(false); return; }
+        try {
+            var tx = db.transaction('fila', 'readwrite'), st = tx.objectStore('fila');
+            each(itens, function (it) { st.add(it); });
+            tx.oncomplete = function () { cb(true); };
+            tx.onerror = function () { cb(false); };
+        } catch (e) { cb(false); }
+    });
+}
+function filaTodos(cb) {
+    idbAbrir(function (db) {
+        if (!db) { cb([]); return; }
+        try {
+            var r = db.transaction('fila', 'readonly').objectStore('fila').getAll();
+            r.onsuccess = function () { cb(r.result || []); };
+            r.onerror = function () { cb([]); };
+        } catch (e) { cb([]); }
+    });
+}
+function filaRemover(id, cb) {
+    idbAbrir(function (db) {
+        try { var tx = db.transaction('fila', 'readwrite'); tx.objectStore('fila').delete(id); tx.oncomplete = function () { cb(); }; tx.onerror = function () { cb(); }; }
+        catch (e) { cb(); }
+    });
+}
+function ehWifi() {
+    var c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    return !!(c && (c.type === 'wifi' || c.type === 'ethernet'));
+}
+function mb(n) { return (n / 1048576).toFixed(1).replace('.', ','); }
+function blobBase64(blob, cb) {
+    var fr = new FileReader();
+    fr.onload = function () { var s = String(fr.result); cb(s.substring(s.indexOf(',') + 1)); };
+    fr.onerror = function () { cb(null); };
+    fr.readAsDataURL(blob);
+}
+
+function atualizarEnvio(msg) {
+    var box = $('envio-status');
+    if (!box || !ENVIO_URL) return;
+    filaTodos(function (fila) {
+        var tam = 0; each(fila, function (f) { tam += f.blob.size || 0; });
+        var txt;
+        if (msg) txt = msg;
+        else if (!fila.length) txt = '☁ Envio ao Drive: tudo enviado.';
+        else if (!navigator.onLine) txt = '☁ ' + fila.length + ' arquivo(s) aguardando internet (' + mb(tam) + ' MB).';
+        else if (!ehWifi()) txt = '☁ ' + fila.length + ' arquivo(s) aguardando Wi-Fi (' + mb(tam) + ' MB).';
+        else txt = '☁ ' + fila.length + ' arquivo(s) pendente(s) (' + mb(tam) + ' MB).';
+        box.style.display = 'block';
+        box.innerHTML = txt + (fila.length && !enviando ? ' <button type="button" onclick="enviarAgora()" style="margin-left:4px;padding:3px 8px;font-size:11px;">Enviar agora</button>' : '');
+    });
+}
+
+function enviarAgora() {
+    if (!navigator.onLine) { aviso('Sem internet no momento.', 4000); return; }
+    if (!ehWifi()) {
+        var ok = true;
+        try { ok = window.confirm('O celular não está no Wi-Fi. Enviar agora usando os dados móveis?'); } catch (e) {}
+        if (!ok) return;
+    }
+    processarFila(true);
+}
+
+function processarFila(manual) {
+    if (!ENVIO_URL || enviando) return;
+    if (!navigator.onLine || (!manual && !ehWifi())) { atualizarEnvio(); return; }
+    filaTodos(function (fila) {
+        if (!fila.length) { atualizarEnvio(); return; }
+        enviando = true;
+        var i = 0, enviados = 0;
+        function fim(erro) {
+            enviando = false;
+            atualizarEnvio(erro ? '☁ Falha no envio (' + erro + '). Nova tentativa automática no Wi-Fi.' : null);
+            if (enviados && !erro) aviso('☁ ' + enviados + ' arquivo(s) enviado(s) ao Drive.', 4000);
+        }
+        function prox() {
+            if (i >= fila.length) { fim(); return; }
+            var it = fila[i++];
+            atualizarEnvio('☁ Enviando ' + i + ' de ' + fila.length + '...');
+            blobBase64(it.blob, function (b64) {
+                if (b64 === null) { fim('leitura do arquivo'); return; }
+                fetch(ENVIO_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ chave: ENVIO_CHAVE, tipo: TIPO_FICHA, projeto: it.projeto, pasta: it.pasta, nome: it.nome, mime: it.blob.type, dados: b64 })
+                }).then(function (r) { return r.json(); }).then(function (j) {
+                    if (j && j.ok) { enviados++; filaRemover(it.id, prox); }
+                    else fim(j && j.erro ? j.erro : 'resposta inválida');
+                }).catch(function () { fim('sem conexão com o Drive'); });
+            });
+        }
+        prox();
+    });
+}
+
+(function () {
+    window.addEventListener('online', function () { processarFila(false); }, false);
+    window.addEventListener('offline', function () { atualizarEnvio(); }, false);
+    var c = navigator.connection;
+    if (c && c.addEventListener) c.addEventListener('change', function () { processarFila(false); }, false);
+    setInterval(function () { processarFila(false); }, 60000);
+    setTimeout(function () { processarFila(false); }, 2000);
+})();
 
 // ── EXPORTAÇÃO CSV ───────────────────────────────────────────────────────
 function groupValue(name) {
@@ -972,6 +1089,12 @@ function saveAll() {
             var nome = base + '.zip';
             try { baixarBlob(zip, nome); } catch (e) { aviso('Não foi possível gerar o arquivo. Os dados foram mantidos.', 8000); return; }
             aviso('Arquivo gerado: ' + nome, 6000);
+            if (ENVIO_URL) {
+                var proj = trim(val('projeto'));
+                var paraFila = [];
+                each(itens, function (it) { paraFila.push({ projeto: proj, pasta: base, nome: it.nome.replace(/^(fotos|audios)\//, ''), blob: it.blob }); });
+                filaAdicionar(paraFila, function () { processarFila(false); });
+            }
             setTimeout(function () {
                 var ok = true;
                 try { ok = window.confirm('Arquivo gerado: ' + nome + '\n(' + arqs.length + ' foto(s)/áudio(s) + CSV)\n\nConfirme que o arquivo foi baixado.\nOK = limpar a ficha para um novo ponto.\nCancelar = manter os dados na tela.'); } catch (e) { ok = true; }
