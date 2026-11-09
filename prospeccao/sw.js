@@ -1,6 +1,6 @@
 // Guarda a ficha no celular para funcionar sem internet.
 // Ao publicar uma nova versão da ficha, aumente o número abaixo.
-var CACHE = 'ficha-prosp-v4';
+var CACHE = 'prosp-v1';
 var ARQUIVOS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function (e) {
@@ -9,7 +9,7 @@ self.addEventListener('install', function (e) {
 
 self.addEventListener('activate', function (e) {
     e.waitUntil(caches.keys().then(function (nomes) {
-        return Promise.all(nomes.filter(function (n) { return n.indexOf('ficha-prosp-') === 0 && n !== CACHE; }).map(function (n) { return caches.delete(n); }));
+        return Promise.all(nomes.filter(function (n) { return n.indexOf('prosp-') === 0 && n !== CACHE; }).map(function (n) { return caches.delete(n); }));
     }).then(function () { return self.clients.claim(); }));
 });
 
