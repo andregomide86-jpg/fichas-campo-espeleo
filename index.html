@@ -508,6 +508,7 @@ function onChange(e) {
 // Limpa a ficha na própria tela (sem recarregar: o Chrome restaurava os campos ao recarregar)
 function limparFicha() {
     storeDel();
+    idbLimpar();
     $('master-form').reset();
     each(document.querySelectorAll('input[type="hidden"]'), function (el) { el.value = ''; });
     each(document.querySelectorAll('.invalid'), function (el) { el.classList.remove('invalid'); });
@@ -523,7 +524,7 @@ function limparFicha() {
 
 function clearData() {
     var ok = true;
-    try { ok = window.confirm('Apagar todos os dados preenchidos desta ficha?'); } catch (e) { ok = true; }
+    try { ok = window.confirm('Apagar todos os dados preenchidos desta ficha, incluindo as fotos e áudios guardados?'); } catch (e) { ok = true; }
     if (ok) { limparFicha(); aviso('Ficha apagada.', 3000); }
 }
 
@@ -709,9 +710,7 @@ function gerarFotoComTarja(img, coords, quando) {
     var nome = baseNome(quando) + '_foto' + pad2(lista('fotos_lista').length + 1) + '_' + hms(quando) + '.jpg';
     function finalizar(blob) {
         if (!blob) { aviso('Não foi possível gerar a foto neste navegador.', 6000); return; }
-        baixarBlob(blob, nome);
-        registrar('fotos_lista', nome);
-        aviso('Foto salva: ' + nome + (coords ? '' : ' (sem GPS: tarja sem coordenadas)'), 6000);
+        guardarArquivo(nome, blob, 'fotos_lista', 'Foto guardada: ' + nome + (coords ? '' : ' (sem GPS: sem coordenadas)'));
     }
     if (cv.toBlob) cv.toBlob(finalizar, 'image/jpeg', 0.9);
     else finalizar(dataURLparaBlob(cv.toDataURL('image/jpeg', 0.9)));
@@ -771,9 +770,7 @@ function toggleAudio() {
             each(gravStream.getTracks(), function (t) { t.stop(); });
             $('btn-audio').className = 'btn btn-audio';
             var blob = new Blob(gravChunks, { type: mediaRec.mimeType || opt.mimeType || 'audio/webm' });
-            baixarBlob(blob, nome);
-            registrar('audios_lista', nome);
-            aviso('Áudio salvo: ' + nome, 6000);
+            guardarArquivo(nome, blob, 'audios_lista', 'Áudio guardado: ' + nome);
         };
         mediaRec.start(1000);
         gravando = true;
@@ -788,6 +785,91 @@ function toggleAudio() {
     }, function (err) {
         aviso('Não foi possível usar o microfone.' + diagnostico(err), 12000);
     });
+}
+
+// ── ARQUIVOS GUARDADOS NO APARELHO (IndexedDB) E ZIP ─────────────────────
+var IDB_NOME = STORAGE_KEY + '_arquivos';
+function idbAbrir(cb) {
+    try {
+        if (!window.indexedDB) { cb(null); return; }
+        var r = indexedDB.open(IDB_NOME, 1);
+        r.onupgradeneeded = function () { r.result.createObjectStore('f', { keyPath: 'nome' }); };
+        r.onsuccess = function () { cb(r.result); };
+        r.onerror = function () { cb(null); };
+    } catch (e) { cb(null); }
+}
+function idbGuardar(nome, blob, cb) {
+    idbAbrir(function (db) {
+        if (!db) { cb(false); return; }
+        try {
+            var tx = db.transaction('f', 'readwrite');
+            tx.objectStore('f').put({ nome: nome, blob: blob });
+            tx.oncomplete = function () { cb(true); };
+            tx.onerror = function () { cb(false); };
+        } catch (e) { cb(false); }
+    });
+}
+function idbTodos(cb) {
+    idbAbrir(function (db) {
+        if (!db) { cb([]); return; }
+        try {
+            var r = db.transaction('f', 'readonly').objectStore('f').getAll();
+            r.onsuccess = function () { cb(r.result || []); };
+            r.onerror = function () { cb([]); };
+        } catch (e) { cb([]); }
+    });
+}
+function idbLimpar() {
+    idbAbrir(function (db) { if (db) { try { db.transaction('f', 'readwrite').objectStore('f').clear(); } catch (e) {} } });
+}
+// Guarda a foto/áudio no aparelho; se não for possível, baixa na hora
+function guardarArquivo(nome, blob, listaId, msg) {
+    idbGuardar(nome, blob, function (ok) {
+        if (!ok) { baixarBlob(blob, nome); msg += ' (baixado separadamente)'; }
+        registrar(listaId, nome);
+        aviso(msg, 6000);
+    });
+}
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+
+var CRC_T = (function () { var t = [], c, n, k; for (n = 0; n < 256; n++) { c = n; for (k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { var c = 0xFFFFFFFF; for (var i = 0; i < u8.length; i++) c = CRC_T[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function utf8(s) { if (window.TextEncoder) return new TextEncoder().encode(s); var b = unescape(encodeURIComponent(s)), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+function lerBlob(blob, cb) { var fr = new FileReader(); fr.onload = function () { cb(new Uint8Array(fr.result)); }; fr.onerror = function () { cb(null); }; fr.readAsArrayBuffer(blob); }
+
+// Monta um .zip (sem compressão; fotos e áudios já são comprimidos)
+function montarZip(itens, cb) {
+    var partes = [], central = [], off = 0, i = 0, d = new Date();
+    var dt = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    var tm = (d.getHours() << 11) | (d.getMinutes() << 5) | Math.floor(d.getSeconds() / 2);
+    function cab(sig, len) { var b = new DataView(new ArrayBuffer(len)); b.setUint32(0, sig, true); return b; }
+    function prox() {
+        if (i >= itens.length) {
+            var cdSize = 0; each(central, function (c) { cdSize += c.byteLength; });
+            var e = cab(0x06054b50, 22);
+            e.setUint16(8, itens.length, true); e.setUint16(10, itens.length, true);
+            e.setUint32(12, cdSize, true); e.setUint32(16, off, true);
+            cb(new Blob(partes.concat(central, [e.buffer]), { type: 'application/zip' }));
+            return;
+        }
+        var it = itens[i++];
+        lerBlob(it.blob, function (dados) {
+            if (!dados) { prox(); return; }
+            var nome = utf8(it.nome), crc = crc32(dados);
+            var h = cab(0x04034b50, 30);
+            h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(10, tm, true); h.setUint16(12, dt, true);
+            h.setUint32(14, crc, true); h.setUint32(18, dados.length, true); h.setUint32(22, dados.length, true); h.setUint16(26, nome.length, true);
+            var c = cab(0x02014b50, 46);
+            c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(12, tm, true); c.setUint16(14, dt, true);
+            c.setUint32(16, crc, true); c.setUint32(20, dados.length, true); c.setUint32(24, dados.length, true); c.setUint16(28, nome.length, true);
+            c.setUint32(42, off, true);
+            partes.push(h.buffer, nome, dados);
+            central.push(c.buffer, nome.buffer.slice(nome.byteOffset, nome.byteOffset + nome.byteLength));
+            off += 30 + nome.length + dados.length;
+            prox();
+        });
+    }
+    prox();
 }
 
 // ── EXPORTAÇÃO CSV ───────────────────────────────────────────────────────
@@ -879,19 +961,24 @@ function saveAll() {
         values.push('"' + String(c[1] == null ? '' : c[1]).replace(/"/g, '""') + '"');
     });
     var csv = headers.join(';') + '\n' + values.join(';');
-    var nome = limpaNome(val('cavidade_nome')) + '_' + dataInput.replace(/-/g, '') + '_' + nomeEquipeArquivo() + '.csv';
+    var base = limpaNome(val('cavidade_nome')) + '_' + dataInput.replace(/-/g, '') + '_' + nomeEquipeArquivo();
+    var csvBlob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
 
-    try {
-        baixarBlob(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }), nome);
-    } catch (e) {
-        alert('Não foi possível gerar o CSV neste navegador. Os dados preenchidos foram mantidos.');
-        return;
-    }
-    setTimeout(function () {
-        var ok = true;
-        try { ok = window.confirm('Arquivo gerado: ' + nome + '\n\nConfirme que o arquivo foi baixado.\nOK = limpar a ficha para um novo cadastro.\nCancelar = manter os dados na tela.'); } catch (e) { ok = true; }
-        if (ok) limparFicha();
-    }, 800);
+    aviso('⏳ Gerando o arquivo .zip...', 30000);
+    idbTodos(function (arqs) {
+        var itens = [{ nome: base + '.csv', blob: csvBlob }];
+        each(arqs, function (a) { itens.push({ nome: (/\.jpg$/i.test(a.nome) ? 'fotos/' : 'audios/') + a.nome, blob: a.blob }); });
+        montarZip(itens, function (zip) {
+            var nome = base + '.zip';
+            try { baixarBlob(zip, nome); } catch (e) { aviso('Não foi possível gerar o arquivo. Os dados foram mantidos.', 8000); return; }
+            aviso('Arquivo gerado: ' + nome, 6000);
+            setTimeout(function () {
+                var ok = true;
+                try { ok = window.confirm('Arquivo gerado: ' + nome + '\n(' + arqs.length + ' foto(s)/áudio(s) + CSV)\n\nConfirme que o arquivo foi baixado.\nOK = limpar a ficha para um novo ponto.\nCancelar = manter os dados na tela.'); } catch (e) { ok = true; }
+                if (ok) limparFicha();
+            }, 1200);
+        });
+    });
 }
 
 // ── INICIALIZAÇÃO ────────────────────────────────────────────────────────

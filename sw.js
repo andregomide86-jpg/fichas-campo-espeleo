@@ -1,6 +1,6 @@
 // Guarda a ficha no celular para funcionar sem internet.
 // Ao publicar uma nova versão da ficha, aumente o número abaixo.
-var CACHE = 'ficha-cadastro-v3';
+var CACHE = 'ficha-cadastro-v4';
 var ARQUIVOS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function (e) {
@@ -9,7 +9,7 @@ self.addEventListener('install', function (e) {
 
 self.addEventListener('activate', function (e) {
     e.waitUntil(caches.keys().then(function (nomes) {
-        return Promise.all(nomes.filter(function (n) { return n !== CACHE; }).map(function (n) { return caches.delete(n); }));
+        return Promise.all(nomes.filter(function (n) { return n.indexOf('ficha-cadastro-') === 0 && n !== CACHE; }).map(function (n) { return caches.delete(n); }));
     }).then(function () { return self.clients.claim(); }));
 });
 
