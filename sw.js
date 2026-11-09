@@ -1,6 +1,6 @@
 // Guarda a ficha no celular para funcionar sem internet.
 // Ao publicar uma nova versão da ficha, aumente o número abaixo.
-var CACHE = 'ficha-cadastro-v2';
+var CACHE = 'ficha-cadastro-v3';
 var ARQUIVOS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function (e) {

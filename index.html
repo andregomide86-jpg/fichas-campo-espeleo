@@ -100,10 +100,8 @@
             </div>
         </div>
 
-        <div class="grid-2">
-            <div class="form-group"><label>Data</label><input type="date" id="data_atual"></div>
-            <div class="form-group"><label>Ponto</label><input type="text" class="dict" id="cavidade_nome" placeholder="Nome do ponto"></div>
-        </div>
+        <div class="form-group"><label>Ponto</label><input type="text" class="dict" id="cavidade_nome" placeholder="Nome do ponto"></div>
+        <input type="hidden" id="data_atual">
 
         <h3>Coordenadas UTM (WGS 84)</h3>
         <button type="button" class="btn-gps" id="btn-gps" onclick="capturarGPS()">📍 Capturar coordenadas (GPS)</button>
@@ -403,6 +401,11 @@ function equipeStr() {
 }
 function nomeEquipeArquivo() { return limpaNome(equipeStr()); }
 
+// Data automática: registrada no dia em que a ficha começa a ser preenchida
+function hojeISO() { var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function garantirData() { if (!val('data_atual')) $('data_atual').value = hojeISO(); }
+function dataBR(iso) { var p = String(iso).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso; }
+
 // ── VALIDAÇÃO (nenhum campo pode ficar vazio) ─────────────────────────────
 var mostrarErros = false;
 
@@ -418,7 +421,6 @@ function validate() {
     var eq = getRadio('Equipe');
     req(eq !== '', $('equipe-box'));
     req(eq !== 'Outro' || trim(val('equipe_outro')) !== '', $('equipe_outro'));
-    req(val('data_atual') !== '', $('data_atual'));
     req(trim(val('cavidade_nome')) !== '', $('cavidade_nome'));
     req(trim(val('coord_e')) !== '', $('coord_e'));
     req(trim(val('coord_n')) !== '', $('coord_n'));
@@ -511,6 +513,7 @@ function limparFicha() {
     each(document.querySelectorAll('.invalid'), function (el) { el.classList.remove('invalid'); });
     each(document.querySelectorAll('.tab-btn'), function (b) { b.classList.remove('err'); });
     $('projeto').value = 'Itambé';
+    garantirData();
     $('gps-status').style.display = 'none';
     mostrarErros = false;
     renderListas();
@@ -813,12 +816,13 @@ function saveAll() {
         return;
     }
 
+    garantirData();
     var dataInput = val('data_atual');
     var mapa = [
         ["Projeto", trim(val('projeto'))],
         ["Equipe", equipeStr()],
         ["Ponto", trim(val('cavidade_nome'))],
-        ["Data", dataInput],
+        ["Data", dataBR(dataInput)],
         ["Coordenadas E", trim(val('coord_e'))],
         ["Coordenadas N", trim(val('coord_n'))],
         ["Altitude (m)", trim(val('coord_alt'))],
@@ -903,6 +907,7 @@ if (location.protocol === 'content:') {
 }
 renderAll();
 loadData();
+garantirData();
 renderListas();
 
 var form = $('master-form');
